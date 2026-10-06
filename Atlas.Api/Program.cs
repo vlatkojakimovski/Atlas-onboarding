@@ -22,9 +22,31 @@ builder.Host.UseSerilog();
 
 Log.Information("Starting Atlas Onboarding API...");
 
-// Add DbContext
+// Add DbContext with retry policies
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            // Enable retry on transient failures (Requirement 11.5)
+            // 3 retries with exponential backoff (max 5 seconds delay)
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(5),
+                errorNumbersToAdd: null); // Use default transient error numbers
+            
+            // Set command timeout (30 seconds)
+            sqlOptions.CommandTimeout(30);
+        });
+    
+    // Enable sensitive data logging in development only
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+});
 
 // Add services to the container.
 builder.Services.AddControllers();
