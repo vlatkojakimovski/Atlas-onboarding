@@ -30,5 +30,11 @@ public class AccountDetailsEntityConfiguration : IEntityTypeConfiguration<Accoun
         // Unique constraint on ApplicationId
         builder.HasIndex(ad => ad.ApplicationId)
             .IsUnique();
+
+        // Relationship
+        builder.HasOne(ad => ad.Application)
+            .WithOne(a => a.AccountDetails)
+            .HasForeignKey<AccountDetailsEntity>(ad => ad.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

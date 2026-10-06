@@ -28,9 +28,15 @@ public class ApplicationDecisionEntityConfiguration : IEntityTypeConfiguration<A
         builder.HasIndex(ad => ad.ApplicationId)
             .IsUnique();
 
+        // Relationship with Application
+        builder.HasOne(ad => ad.Application)
+            .WithOne(a => a.Decision)
+            .HasForeignKey<ApplicationDecisionEntity>(ad => ad.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Relationship with RejectionReasons
         builder.HasMany(ad => ad.RejectionReasons)
-            .WithOne()
+            .WithOne(rr => rr.Decision)
             .HasForeignKey(rr => rr.DecisionId)
             .OnDelete(DeleteBehavior.Cascade);
     }

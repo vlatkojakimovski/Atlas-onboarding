@@ -37,5 +37,11 @@ public class DocumentEntityConfiguration : IEntityTypeConfiguration<DocumentEnti
         // Index
         builder.HasIndex(d => d.ApplicationId)
             .HasDatabaseName("IX_Documents_ApplicationId");
+
+        // Relationship
+        builder.HasOne(d => d.Application)
+            .WithMany(a => a.Documents)
+            .HasForeignKey(d => d.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

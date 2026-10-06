@@ -20,5 +20,11 @@ public class RejectionReasonEntityConfiguration : IEntityTypeConfiguration<Rejec
         builder.Property(rr => rr.Reason)
             .IsRequired()
             .HasMaxLength(50);
+
+        // Relationship
+        builder.HasOne(rr => rr.Decision)
+            .WithMany(d => d.RejectionReasons)
+            .HasForeignKey(rr => rr.DecisionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

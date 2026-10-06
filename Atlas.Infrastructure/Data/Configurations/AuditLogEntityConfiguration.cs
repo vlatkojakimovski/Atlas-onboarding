@@ -61,5 +61,12 @@ public class AuditLogEntityConfiguration : IEntityTypeConfiguration<AuditLogEnti
 
         builder.HasIndex(al => al.MarketCode)
             .HasDatabaseName("IX_AuditLogs_MarketCode");
+
+        // Relationship
+        builder.HasOne(al => al.Application)
+            .WithMany(a => a.AuditLogs)
+            .HasForeignKey(al => al.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired(false);  // ApplicationId is nullable
     }
 }

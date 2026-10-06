@@ -37,5 +37,11 @@ public class CardOrderEntityConfiguration : IEntityTypeConfiguration<CardOrderEn
         // Unique constraint on ApplicationId
         builder.HasIndex(co => co.ApplicationId)
             .IsUnique();
+
+        // Relationship
+        builder.HasOne(co => co.Application)
+            .WithOne(a => a.CardOrder)
+            .HasForeignKey<CardOrderEntity>(co => co.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

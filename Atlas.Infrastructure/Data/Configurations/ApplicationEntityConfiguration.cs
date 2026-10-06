@@ -76,40 +76,6 @@ public class ApplicationEntityConfiguration : IEntityTypeConfiguration<Applicati
         builder.HasIndex(a => a.Email)
             .HasDatabaseName("IX_Applications_Email");
 
-        // Relationships
-        builder.HasMany(a => a.Documents)
-            .WithOne()
-            .HasForeignKey(d => d.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.IdentityVerification)
-            .WithOne()
-            .HasForeignKey<IdentityVerificationEntity>(iv => iv.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.SanctionsScreening)
-            .WithOne()
-            .HasForeignKey<SanctionsScreeningEntity>(ss => ss.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.AccountDetails)
-            .WithOne()
-            .HasForeignKey<AccountDetailsEntity>(ad => ad.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.CardOrder)
-            .WithOne()
-            .HasForeignKey<CardOrderEntity>(co => co.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(a => a.Decision)
-            .WithOne()
-            .HasForeignKey<ApplicationDecisionEntity>(ad => ad.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(a => a.AuditLogs)
-            .WithOne()
-            .HasForeignKey(al => al.ApplicationId)
-            .OnDelete(DeleteBehavior.Cascade);
+        // Relationships - configured in dependent entity configurations to avoid duplicate mappings
     }
 }

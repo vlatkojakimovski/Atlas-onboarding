@@ -33,5 +33,11 @@ public class SanctionMatchEntityConfiguration : IEntityTypeConfiguration<Sanctio
         builder.ToTable(t => t.HasCheckConstraint(
             "CK_SanctionMatches_Type",
             "[MatchType] IN ('Sanctions', 'PEP')"));
+
+        // Relationship
+        builder.HasOne(sm => sm.Screening)
+            .WithMany(s => s.Matches)
+            .HasForeignKey(sm => sm.ScreeningId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

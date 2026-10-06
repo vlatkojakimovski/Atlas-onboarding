@@ -37,9 +37,15 @@ public class SanctionsScreeningEntityConfiguration : IEntityTypeConfiguration<Sa
         builder.HasIndex(ss => ss.ApplicationId)
             .IsUnique();
 
+        // Relationship with Application
+        builder.HasOne(ss => ss.Application)
+            .WithOne(a => a.SanctionsScreening)
+            .HasForeignKey<SanctionsScreeningEntity>(ss => ss.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Relationship with SanctionMatches
         builder.HasMany(ss => ss.Matches)
-            .WithOne()
+            .WithOne(sm => sm.Screening)
             .HasForeignKey(sm => sm.ScreeningId)
             .OnDelete(DeleteBehavior.Cascade);
     }

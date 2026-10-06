@@ -43,5 +43,11 @@ public class IdentityVerificationEntityConfiguration : IEntityTypeConfiguration<
         // Unique constraint on ApplicationId
         builder.HasIndex(iv => iv.ApplicationId)
             .IsUnique();
+
+        // Relationship
+        builder.HasOne(iv => iv.Application)
+            .WithOne(a => a.IdentityVerification)
+            .HasForeignKey<IdentityVerificationEntity>(iv => iv.ApplicationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
