@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Kiro AI assistant folder (keep locally, don't commit)
+.kiro/
