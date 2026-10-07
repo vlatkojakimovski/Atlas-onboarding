@@ -18,7 +18,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
 
 ### 1. Foundation & Setup
 
-- [ ] 1.1 Create solution structure and projects
+- [x] 1.1 Create solution structure and projects
   - Create `Atlas.sln` solution file
   - Create `Atlas.Api` project (ASP.NET Core Web API, .NET 8)
   - Create `Atlas.Application` project (Class Library, .NET 8)
@@ -29,7 +29,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Add project references following clean architecture dependencies
   - _Requirements: All functional requirements (project structure foundation)_
 
-- [ ] 1.2 Install required NuGet packages
+- [x] 1.2 Install required NuGet packages
   - **Atlas.Api:** Microsoft.AspNetCore.OpenApi, Swashbuckle.AspNetCore, Serilog.AspNetCore, Serilog.Sinks.Seq, Serilog.Enrichers.Environment
   - **Atlas.Application:** FluentValidation, Microsoft.Extensions.DependencyInjection.Abstractions
   - **Atlas.Infrastructure:** Microsoft.EntityFrameworkCore.SqlServer, Microsoft.EntityFrameworkCore.Design, Polly, Polly.Extensions.Http
@@ -37,7 +37,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - **Atlas.Tests.Integration:** Microsoft.AspNetCore.Mvc.Testing, Microsoft.EntityFrameworkCore.InMemory
   - _Requirements: 16, 17, 18 (configuration, performance, logging dependencies)_
 
-- [ ] 1.3 Configure appsettings.json with market configurations
+- [x] 1.3 Configure appsettings.json with market configurations
   - Add Markets configuration section with all 6 markets (MA-MF)
   - Configure national ID patterns from Annex B (regex patterns)
   - Add branch activation flags (MD market: true, others: false)
@@ -46,7 +46,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Add timeout configurations (10s for providers)
   - _Requirements: 2.1-2.7, 14.4, 16.1-16.5, 17.1-17.2_
 
-- [ ] 1.4 Set up Serilog structured logging
+- [x] 1.4 Set up Serilog structured logging
   - Configure Serilog in Program.cs with JSON formatter
   - Add Seq sink with configured URL
   - Add enrichers for correlation ID, user context, market context
@@ -58,7 +58,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
 
 ### 2. Database Layer
 
-- [ ] 2.1 Create EF Core DbContext and entity configurations
+- [x] 2.1 Create EF Core DbContext and entity configurations
   - Create `ApplicationDbContext` class
   - Define `Applications` DbSet
   - Define `Documents` DbSet
@@ -73,7 +73,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Configure relationships and constraints from schema
   - _Requirements: 12.1-12.10_
 
-- [ ] 2.2 Create entity classes matching database schema
+- [x] 2.2 Create entity classes matching database schema
   - Create `ApplicationEntity` with all fields from Applications table
   - Create `DocumentEntity` with foreign key to ApplicationEntity
   - Create `IdentityVerificationEntity` with one-to-one relationship
@@ -86,7 +86,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Create `AuditLogEntity` with foreign key to ApplicationEntity
   - _Requirements: 12.1-12.10_
 
-- [ ] 2.3 Configure EF Core fluent API for constraints
+- [x] 2.3 Configure EF Core fluent API for constraints
   - Add CHECK constraints for Status enumeration
   - Add CHECK constraints for MarketCode enumeration
   - Add CHECK constraints for DocumentType enumeration
@@ -96,7 +96,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Configure foreign key relationships with cascading behavior
   - _Requirements: 12.10, 14.3_
 
-- [ ] 2.4 Create and apply EF Core migrations
+- [x] 2.4 Create and apply EF Core migrations
   - Run `dotnet ef migrations add InitialCreate`
   - Review generated migration SQL
   - Update connection string in appsettings.json for local SQL Server
@@ -104,7 +104,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Verify tables, constraints, and indexes created correctly
   - _Requirements: 12.1-12.10_
 
-- [ ] 2.5 Configure retry policies for database operations
+- [x] 2.5 Configure retry policies for database operations
   - Configure EF Core with `EnableRetryOnFailure` (3 retries, 5s max delay)
   - Test transient failure handling with connection interruption
   - _Requirements: 11.5_
@@ -113,7 +113,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
 
 ### 3. Domain Layer - Core Models and Value Objects
 
-- [ ] 3.1 Create domain enumerations
+- [x] 3.1 Create domain enumerations
   - Create `ApplicationStatus` enum: Pending, Approved, Rejected, PendingReview
   - Create `DocumentType` enum: PASSPORT, ID_CARD, SELFIE
   - Create `DocumentVerificationStatus` enum: Valid, Invalid, Inconclusive
@@ -122,7 +122,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Create `RejectionReason` enum: InvalidDocument, FaceMismatch, InconclusiveVerificationResult, SanctionMatch, PossibleSanctionMatch, VerificationProviderUnavailable, ScreeningProviderUnavailable
   - _Requirements: 3.3-3.6, 4.3-4.6, 5.2, 5.4-5.5_
 
-- [ ] 3.2 Create value objects and records
+- [x] 3.2 Create value objects and records
   - Create `IdentityVerificationResult` record with ProviderId, DocumentStatus, FaceMatch, Confidence, VerifiedAt
   - Create `SanctionsScreeningResult` record with CaseId, Status, Matches, ScreenedAt
   - Create `SanctionMatch` record with Type, Score, Subject
@@ -133,7 +133,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Create `NationalIdValidationRule` record with Pattern, Description, Example
   - _Requirements: 2.1-2.7, 3.2, 4.2, 5.3, 6.2, 7.2, 14.6, 16.2_
 
-- [ ] 3.3 Create Application aggregate root
+- [x] 3.3 Create Application aggregate root
   - Create `Application` class with Id, FirstName, LastName, DateOfBirth, MarketCode, NationalId, Email, Phone, Status, CreatedAt, CompletedAt
   - Add navigation properties for Documents, IdentityVerification, SanctionsScreening, AccountDetails, CardOrder, Decision
   - Add private setters to enforce encapsulation
@@ -145,7 +145,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Add validation rules: FirstName/LastName 1-100 chars, DateOfBirth 18+, immutable state transitions
   - _Requirements: 1.1, 5.4-5.5, 12.1_
 
-- [ ] 3.4 Create domain validation rules
+- [x] 3.4 Create domain validation rules
   - Implement age validation (must be 18+)
   - Implement state transition validation (Pending → Approved/Rejected only, no reversals)
   - Implement required fields validation
@@ -156,7 +156,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
 
 ### 4. Domain Layer - Business Logic
 
-- [ ] 4.1 Implement market configuration provider
+- [x] 4.1 Implement market configuration provider
   - Create `IMarketConfigurationProvider` interface
   - Create `MarketConfigurationProvider` class
   - Implement `GetMarketConfiguration(string marketCode)` method
@@ -165,7 +165,7 @@ This implementation plan breaks down the Atlas Onboarding backend system into di
   - Validate all markets configured at startup (fail fast if missing)
   - _Requirements: 14.4-14.7, 16.1-16.5_
 
-- [ ] 4.2 Implement national ID validator
+- [x] 4.2 Implement national ID validator
   - Create `INationalIdValidator` interface
   - Create `NationalIdValidator` class
   - Implement `IsValid(string nationalId, string marketCode)` method
