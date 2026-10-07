@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Atlas.Infrastructure.Data;
 using Atlas.Infrastructure;
 using Atlas.Domain;
+using Atlas.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +54,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Add services to the container.
 builder.Services.AddDomain();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

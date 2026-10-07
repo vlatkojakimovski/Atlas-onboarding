@@ -1,7 +1,9 @@
 namespace Atlas.Infrastructure;
 
+using Atlas.Application.Services;
 using Atlas.Domain.Configuration;
 using Atlas.Domain.Repositories;
+using Atlas.Infrastructure.Audit;
 using Atlas.Infrastructure.Configuration;
 using Atlas.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
@@ -29,6 +31,10 @@ public static class DependencyInjection
         // Register application repository (Task 5.7)
         // Scoped lifetime to align with DbContext lifetime
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
+
+        // Register audit logger (Task 5.6)
+        // Scoped lifetime to align with DbContext lifetime
+        services.AddScoped<IAuditLogger, AuditLogger>();
 
         return services;
     }

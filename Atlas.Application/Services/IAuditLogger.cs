@@ -1,4 +1,4 @@
-namespace Atlas.Infrastructure.Audit;
+namespace Atlas.Application.Services;
 
 using Atlas.Domain.Enums;
 using Atlas.Domain.ValueObjects;
