@@ -5,6 +5,7 @@ using Atlas.Infrastructure.Data;
 using Atlas.Infrastructure;
 using Atlas.Domain;
 using Atlas.Application;
+using Atlas.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +68,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Add global exception handling middleware
+app.UseGlobalExceptionHandling();
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
