@@ -123,7 +123,7 @@ public class AuditLogger : IAuditLogger
     /// </summary>
     public async Task LogDecisionMadeAsync(
         Guid applicationId,
-        ApplicationDecision decision,
+        Atlas.Domain.ValueObjects.ApplicationDecision decision,
         CancellationToken cancellationToken = default)
     {
         const string eventType = "DecisionMade";

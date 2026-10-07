@@ -5,7 +5,12 @@ using Atlas.Domain.Configuration;
 using Atlas.Domain.Repositories;
 using Atlas.Infrastructure.Audit;
 using Atlas.Infrastructure.Configuration;
+using Atlas.Infrastructure.ExternalServices.CardOrdering;
+using Atlas.Infrastructure.ExternalServices.CoreBanking;
+using Atlas.Infrastructure.ExternalServices.IdentityVerification;
+using Atlas.Infrastructure.ExternalServices.SanctionsScreening;
 using Atlas.Infrastructure.Repositories;
+using Atlas.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +40,17 @@ public static class DependencyInjection
         // Register audit logger (Task 5.6)
         // Scoped lifetime to align with DbContext lifetime
         services.AddScoped<IAuditLogger, AuditLogger>();
+
+        // Register external service adapters (Task 5.1-5.5)
+        // Transient for mock services (stateless)
+        services.AddTransient<IIdentityVerificationService, MockIdentityVerificationService>();
+        services.AddTransient<ISanctionsScreeningService, MockSanctionsScreeningService>();
+        services.AddScoped<ICoreBankingService, MockCoreBankingService>();
+        services.AddScoped<ICardOrderingService, MockCardOrderingService>();
+
+        // Register application orchestrator (Task 6.3)
+        // Scoped lifetime
+        services.AddScoped<IApplicationOrchestrator, ApplicationOrchestrator>();
 
         return services;
     }

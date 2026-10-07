@@ -44,7 +44,7 @@ public interface IAuditLogger
     /// </summary>
     Task LogDecisionMadeAsync(
         Guid applicationId,
-        ApplicationDecision decision,
+        Atlas.Domain.ValueObjects.ApplicationDecision decision,
         CancellationToken cancellationToken = default);
 
     /// <summary>
