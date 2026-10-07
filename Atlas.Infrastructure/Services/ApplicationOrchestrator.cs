@@ -60,99 +60,111 @@ public class ApplicationOrchestrator : IApplicationOrchestrator
         Application application,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(application);
-
-        _logger.LogInformation(
-            "Starting application processing for {ApplicationId}",
-            application.Id);
-
-        // Get market configuration
-        var marketConfig = _marketConfigProvider.GetMarketConfiguration(application.MarketCode);
-        if (marketConfig == null)
+        try
         {
-            throw new InvalidOperationException($"Market configuration not found for market: {application.MarketCode}");
+            ArgumentNullException.ThrowIfNull(application);
+
+            _logger.LogInformation(
+                "Starting application processing for {ApplicationId}",
+                application.Id);
+
+            // Get market configuration
+            var marketConfig = _marketConfigProvider.GetMarketConfiguration(application.MarketCode);
+            if (marketConfig == null)
+            {
+                throw new InvalidOperationException($"Market configuration not found for market: {application.MarketCode}");
+            }
+
+            // Step 1: Execute identity verification and sanctions screening in parallel
+            _logger.LogInformation(
+                "Executing identity verification and sanctions screening in parallel for {ApplicationId}",
+                application.Id);
+
+            var verificationTask = ExecuteIdentityVerificationAsync(application, cancellationToken);
+            var screeningTask = ExecuteSanctionsScreeningAsync(application, cancellationToken);
+
+            await Task.WhenAll(verificationTask, screeningTask);
+
+            var verificationResult = await verificationTask;
+            var screeningResult = await screeningTask;
+            
+            // Step 2: Log verification and screening completion
+            await _auditLogger.LogVerificationCompletedAsync(
+                application.Id,
+                verificationResult,
+                cancellationToken);
+
+            await _auditLogger.LogScreeningCompletedAsync(
+                application.Id,
+                screeningResult,
+                cancellationToken);
+
+            _logger.LogInformation(
+                "Verification and screening completed for {ApplicationId}. DocumentStatus: {DocumentStatus}, FaceMatch: {FaceMatch}, ScreeningStatus: {ScreeningStatus}",
+                application.Id, verificationResult.DocumentStatus, verificationResult.FaceMatch, screeningResult.Status);
+
+            // Update application with verification and screening results
+            application.CompleteVerification(verificationResult);
+            application.CompleteScreening(screeningResult);
+
+            // Step 3: Invoke decision engine
+            _logger.LogDebug(
+                "Invoking decision engine for {ApplicationId}",
+                application.Id);
+
+            Atlas.Domain.ValueObjects.ApplicationDecision decision = _decisionEngine.MakeDecision(
+                verificationResult,
+                screeningResult,
+                marketConfig);
+
+            // Step 4: Log decision made
+            await _auditLogger.LogDecisionMadeAsync(
+                application.Id,
+                decision,
+                cancellationToken);
+
+            _logger.LogInformation(
+                "Decision made for {ApplicationId}: {Status}, IsApproved: {IsApproved}, ReasonCount: {ReasonCount}",
+                application.Id, decision.Status, decision.IsApproved, decision.Reasons.Count);
+
+            // Step 5 & 6: Process approval or rejection
+            ApplicationResult result;
+
+            if (decision.IsApproved)
+            {
+                _logger.LogDebug("Processing approval workflow");
+                result = await ProcessApprovalAsync(application, marketConfig, cancellationToken);
+            }
+            else
+            {
+                result = await ProcessRejectionAsync(application, decision, cancellationToken);
+            }
+
+            // Step 7: Log application status changed
+            await _auditLogger.LogApplicationStatusChangedAsync(
+                application.Id,
+                ApplicationStatus.Pending,
+                result.Status,
+                GetStatusChangeReason(result),
+                cancellationToken);
+
+            // Step 8: Update the application with all changes
+            await _repository.UpdateAsync(application, cancellationToken);
+
+            _logger.LogInformation(
+                "Application processing completed for {ApplicationId} with status {Status}",
+                application.Id, result.Status);
+
+            return result;
         }
-
-        // Step 1: Execute identity verification and sanctions screening in parallel
-        _logger.LogInformation(
-            "Executing identity verification and sanctions screening in parallel for {ApplicationId}",
-            application.Id);
-
-        var verificationTask = ExecuteIdentityVerificationAsync(application, cancellationToken);
-        var screeningTask = ExecuteSanctionsScreeningAsync(application, cancellationToken);
-
-        await Task.WhenAll(verificationTask, screeningTask);
-
-        var verificationResult = await verificationTask;
-        var screeningResult = await screeningTask;
-
-        // Step 2: Log verification and screening completion
-        await _auditLogger.LogVerificationCompletedAsync(
-            application.Id,
-            verificationResult,
-            cancellationToken);
-
-        await _auditLogger.LogScreeningCompletedAsync(
-            application.Id,
-            screeningResult,
-            cancellationToken);
-
-        _logger.LogInformation(
-            "Verification and screening completed for {ApplicationId}. DocumentStatus: {DocumentStatus}, FaceMatch: {FaceMatch}, ScreeningStatus: {ScreeningStatus}",
-            application.Id, verificationResult.DocumentStatus, verificationResult.FaceMatch, screeningResult.Status);
-
-        // Update application with verification and screening results
-        application.CompleteVerification(verificationResult);
-        application.CompleteScreening(screeningResult);
-
-        // Step 3: Invoke decision engine
-        _logger.LogDebug(
-            "Invoking decision engine for {ApplicationId}",
-            application.Id);
-
-        Atlas.Domain.ValueObjects.ApplicationDecision decision = _decisionEngine.MakeDecision(
-            verificationResult,
-            screeningResult,
-            marketConfig);
-
-        // Step 4: Log decision made
-        await _auditLogger.LogDecisionMadeAsync(
-            application.Id,
-            decision,
-            cancellationToken);
-
-        _logger.LogInformation(
-            "Decision made for {ApplicationId}: {Status}, IsApproved: {IsApproved}, ReasonCount: {ReasonCount}",
-            application.Id, decision.Status, decision.IsApproved, decision.Reasons.Count);
-
-        // Step 5 & 6: Process approval or rejection
-        ApplicationResult result;
-
-        if (decision.IsApproved)
+        catch (Exception ex)
         {
-            result = await ProcessApprovalAsync(application, marketConfig, cancellationToken);
+            _logger.LogError(
+                ex,
+                "CRITICAL ERROR in orchestrator for {ApplicationId}. Exception: {ExceptionType}, Message: {Message}, StackTrace: {StackTrace}",
+                application.Id, ex.GetType().Name, ex.Message, ex.StackTrace);
+            throw;
         }
-        else
-        {
-            result = await ProcessRejectionAsync(application, decision, cancellationToken);
-        }
-
-        // Step 7: Log application status changed
-        await _auditLogger.LogApplicationStatusChangedAsync(
-            application.Id,
-            ApplicationStatus.Pending,
-            result.Status,
-            GetStatusChangeReason(result),
-            cancellationToken);
-
-        // Step 8: Persist updated application
-        await _repository.UpdateAsync(application, cancellationToken);
-
-        _logger.LogInformation(
-            "Application processing completed for {ApplicationId} with status {Status}",
-            application.Id, result.Status);
-
-        return result;
     }
 
     /// <summary>

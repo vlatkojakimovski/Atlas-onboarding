@@ -26,7 +26,7 @@ public static class DependencyInjection
     {
         // Register market configuration provider (Task 4.1)
         // Uses IOptionsMonitor for hot-reload support (Requirement 16.5)
-        services.Configure<MarketsConfiguration>(configuration.GetSection("Markets"));
+        services.Configure<MarketsConfiguration>(configuration);
         services.AddSingleton<IMarketConfigurationProvider, MarketConfigurationProvider>();
 
         // Register national ID validator (Task 4.2)

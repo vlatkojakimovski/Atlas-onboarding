@@ -82,12 +82,15 @@ public class SubmitApplicationCommandHandler
             "Application aggregate created with ID {ApplicationId}",
             application.Id);
 
-        // Step 3: Persist application using repository
+        // Step 3: Persist initial application state (Pending with documents only)
         await _repository.AddAsync(application, cancellationToken);
 
         _logger.LogInformation(
-            "Application {ApplicationId} persisted to database",
+            "Application {ApplicationId} persisted to database with Pending status",
             application.Id);
+
+        // NOTE: At this point, the application entity is saved but the domain object
+        // continues to be used by the orchestrator for further processing
 
         // Step 4: Log application created event
         await _auditLogger.LogApplicationCreatedAsync(
@@ -100,16 +103,16 @@ public class SubmitApplicationCommandHandler
             "Application created event logged for {ApplicationId}",
             application.Id);
 
-        // Step 5: Invoke orchestrator to process application
+        // Step 5: Invoke orchestrator to process application and update it
         _logger.LogInformation(
             "Starting application processing workflow for {ApplicationId}",
             application.Id);
 
-        var result = await _orchestrator.ProcessApplicationAsync(application, cancellationToken);
+        ApplicationResult result = await _orchestrator.ProcessApplicationAsync(application, cancellationToken);
 
-        _logger.LogInformation(
-            "Application {ApplicationId} processing completed with status {Status}",
-            result.ApplicationId, result.Status);
+            _logger.LogInformation(
+                "Application {ApplicationId} processing completed with status {Status}",
+                result.ApplicationId, result.Status);
 
         // Step 6: Return result
         return result;

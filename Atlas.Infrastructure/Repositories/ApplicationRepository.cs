@@ -39,6 +39,9 @@ public class ApplicationRepository : IApplicationRepository
         await _dbContext.Applications.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Clear change tracker to avoid tracking conflicts with subsequent Update operations
+        _dbContext.ChangeTracker.Clear();
+
         _logger.LogInformation("Application {ApplicationId} added successfully", application.Id);
     }
 
@@ -79,15 +82,8 @@ public class ApplicationRepository : IApplicationRepository
 
         _logger.LogDebug("Updating application {ApplicationId} in repository", application.Id);
 
+        // Fetch the existing application entity (without child entities initially)
         var existingEntity = await _dbContext.Applications
-            .Include(a => a.Documents)
-            .Include(a => a.IdentityVerification)
-            .Include(a => a.SanctionsScreening)
-                .ThenInclude(s => s!.Matches)
-            .Include(a => a.AccountDetails)
-            .Include(a => a.CardOrder)
-            .Include(a => a.Decision)
-                .ThenInclude(d => d!.RejectionReasons)
             .FirstOrDefaultAsync(a => a.Id == application.Id, cancellationToken);
 
         if (existingEntity == null)
@@ -95,9 +91,103 @@ public class ApplicationRepository : IApplicationRepository
             throw new InvalidOperationException($"Application {application.Id} not found for update.");
         }
 
-        // Update the entity with domain model values
-        UpdateEntity(existingEntity, application);
-        
+        // Update scalar properties on the application
+        existingEntity.Status = application.Status.ToString();
+        existingEntity.CompletedAt = application.CompletedAt;
+
+        // Add new related entities directly to DbContext (they don't exist yet)
+        if (application.IdentityVerification != null)
+        {
+            var verificationEntity = new IdentityVerificationEntity
+            {
+                Id = application.IdentityVerification.Id,
+                ApplicationId = application.Id,
+                ProviderId = application.IdentityVerification.ProviderId,
+                DocumentStatus = application.IdentityVerification.DocumentStatus.ToString(),
+                FaceMatch = application.IdentityVerification.FaceMatch,
+                Confidence = application.IdentityVerification.Confidence,
+                VerifiedAt = application.IdentityVerification.VerifiedAt
+            };
+            await _dbContext.IdentityVerifications.AddAsync(verificationEntity, cancellationToken);
+        }
+
+        if (application.SanctionsScreening != null)
+        {
+            var screeningEntity = new SanctionsScreeningEntity
+            {
+                Id = application.SanctionsScreening.Id,
+                ApplicationId = application.Id,
+                CaseId = application.SanctionsScreening.CaseId,
+                Status = application.SanctionsScreening.Status.ToString(),
+                ScreenedAt = application.SanctionsScreening.ScreenedAt
+            };
+
+            foreach (var match in application.SanctionsScreening.Matches)
+            {
+                screeningEntity.Matches.Add(new SanctionMatchEntity
+                {
+                    Id = match.Id,
+                    ScreeningId = application.SanctionsScreening.Id,
+                    MatchType = match.Type.ToString(),
+                    Score = match.Score,
+                    Subject = match.Subject
+                });
+            }
+
+            await _dbContext.SanctionsScreenings.AddAsync(screeningEntity, cancellationToken);
+        }
+
+        if (application.AccountDetails != null)
+        {
+            var accountEntity = new AccountDetailsEntity
+            {
+                Id = application.AccountDetails.Id,
+                ApplicationId = application.Id,
+                AccountId = application.AccountDetails.AccountId,
+                AccountNumber = application.AccountDetails.AccountNumber,
+                CreatedAt = application.AccountDetails.CreatedAt
+            };
+            await _dbContext.AccountDetails.AddAsync(accountEntity, cancellationToken);
+        }
+
+        if (application.CardOrder != null)
+        {
+            var cardEntity = new CardOrderEntity
+            {
+                Id = application.CardOrder.Id,
+                ApplicationId = application.Id,
+                AccountId = application.CardOrder.AccountId,
+                CardOrderId = application.CardOrder.CardOrderId,
+                CardReference = application.CardOrder.CardReference,
+                RequiresBranchActivation = application.CardOrder.RequiresBranchActivation,
+                OrderedAt = application.CardOrder.OrderedAt
+            };
+            await _dbContext.CardOrders.AddAsync(cardEntity, cancellationToken);
+        }
+
+        if (application.Decision != null)
+        {
+            var decisionEntity = new ApplicationDecisionEntity
+            {
+                Id = application.Decision.Id,
+                ApplicationId = application.Id,
+                Status = application.Decision.Status.ToString(),
+                DecidedAt = application.Decision.DecidedAt
+            };
+
+            foreach (var reason in application.Decision.RejectionReasons)
+            {
+                decisionEntity.RejectionReasons.Add(new RejectionReasonEntity
+                {
+                    Id = Guid.NewGuid(),
+                    DecisionId = application.Decision.Id,
+                    Reason = reason.ToString()
+                });
+            }
+
+            await _dbContext.ApplicationDecisions.AddAsync(decisionEntity, cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Application {ApplicationId} updated successfully", application.Id);
@@ -358,125 +448,6 @@ public class ApplicationRepository : IApplicationRepository
         }
 
         return application;
-    }
-
-    /// <summary>
-    /// Updates existing entity with values from domain model.
-    /// </summary>
-    private void UpdateEntity(ApplicationEntity entity, Application domain)
-    {
-        // Update scalar properties
-        entity.Status = domain.Status.ToString();
-        entity.CompletedAt = domain.CompletedAt;
-
-        // Update or add identity verification
-        if (domain.IdentityVerification != null)
-        {
-            if (entity.IdentityVerification == null)
-            {
-                entity.IdentityVerification = new IdentityVerificationEntity
-                {
-                    Id = domain.IdentityVerification.Id,
-                    ApplicationId = domain.Id
-                };
-            }
-            entity.IdentityVerification.ProviderId = domain.IdentityVerification.ProviderId;
-            entity.IdentityVerification.DocumentStatus = domain.IdentityVerification.DocumentStatus.ToString();
-            entity.IdentityVerification.FaceMatch = domain.IdentityVerification.FaceMatch;
-            entity.IdentityVerification.Confidence = domain.IdentityVerification.Confidence;
-            entity.IdentityVerification.VerifiedAt = domain.IdentityVerification.VerifiedAt;
-        }
-
-        // Update or add sanctions screening
-        if (domain.SanctionsScreening != null)
-        {
-            if (entity.SanctionsScreening == null)
-            {
-                entity.SanctionsScreening = new SanctionsScreeningEntity
-                {
-                    Id = domain.SanctionsScreening.Id,
-                    ApplicationId = domain.Id
-                };
-            }
-            entity.SanctionsScreening.CaseId = domain.SanctionsScreening.CaseId;
-            entity.SanctionsScreening.Status = domain.SanctionsScreening.Status.ToString();
-            entity.SanctionsScreening.ScreenedAt = domain.SanctionsScreening.ScreenedAt;
-
-            // Update matches
-            entity.SanctionsScreening.Matches.Clear();
-            foreach (var match in domain.SanctionsScreening.Matches)
-            {
-                entity.SanctionsScreening.Matches.Add(new SanctionMatchEntity
-                {
-                    Id = match.Id,
-                    ScreeningId = domain.SanctionsScreening.Id,
-                    MatchType = match.Type.ToString(),
-                    Score = match.Score,
-                    Subject = match.Subject
-                });
-            }
-        }
-
-        // Update or add account details
-        if (domain.AccountDetails != null)
-        {
-            if (entity.AccountDetails == null)
-            {
-                entity.AccountDetails = new AccountDetailsEntity
-                {
-                    Id = domain.AccountDetails.Id,
-                    ApplicationId = domain.Id
-                };
-            }
-            entity.AccountDetails.AccountId = domain.AccountDetails.AccountId;
-            entity.AccountDetails.AccountNumber = domain.AccountDetails.AccountNumber;
-            entity.AccountDetails.CreatedAt = domain.AccountDetails.CreatedAt;
-        }
-
-        // Update or add card order
-        if (domain.CardOrder != null)
-        {
-            if (entity.CardOrder == null)
-            {
-                entity.CardOrder = new CardOrderEntity
-                {
-                    Id = domain.CardOrder.Id,
-                    ApplicationId = domain.Id
-                };
-            }
-            entity.CardOrder.AccountId = domain.CardOrder.AccountId;
-            entity.CardOrder.CardOrderId = domain.CardOrder.CardOrderId;
-            entity.CardOrder.CardReference = domain.CardOrder.CardReference;
-            entity.CardOrder.RequiresBranchActivation = domain.CardOrder.RequiresBranchActivation;
-            entity.CardOrder.OrderedAt = domain.CardOrder.OrderedAt;
-        }
-
-        // Update or add decision
-        if (domain.Decision != null)
-        {
-            if (entity.Decision == null)
-            {
-                entity.Decision = new ApplicationDecisionEntity
-                {
-                    Id = domain.Decision.Id,
-                    ApplicationId = domain.Id
-                };
-            }
-            entity.Decision.Status = domain.Decision.Status.ToString();
-            entity.Decision.DecidedAt = domain.Decision.DecidedAt;
-
-            // Update rejection reasons
-            entity.Decision.RejectionReasons.Clear();
-            foreach (var reason in domain.Decision.RejectionReasons)
-            {
-                entity.Decision.RejectionReasons.Add(new RejectionReasonEntity
-                {
-                    Id = Guid.NewGuid(),
-                    DecisionId = domain.Decision.Id,
-                    Reason = reason.ToString()
-                });
-            }
-        }
     }
 
     /// <summary>
