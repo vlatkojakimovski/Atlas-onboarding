@@ -1,7 +1,9 @@
 namespace Atlas.Infrastructure;
 
 using Atlas.Domain.Configuration;
+using Atlas.Domain.Repositories;
 using Atlas.Infrastructure.Configuration;
+using Atlas.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +25,10 @@ public static class DependencyInjection
         // Register national ID validator (Task 4.2)
         // Singleton lifetime since it's a stateless validator with no side effects
         services.AddSingleton<INationalIdValidator, NationalIdValidator>();
+
+        // Register application repository (Task 5.7)
+        // Scoped lifetime to align with DbContext lifetime
+        services.AddScoped<IApplicationRepository, ApplicationRepository>();
 
         return services;
     }
